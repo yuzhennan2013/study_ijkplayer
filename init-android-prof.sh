@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 #
-# Copyright (C) 2013-2015 Bilibili
+# Copyright (C) 2013-2015 bilibili
 # Copyright (C) 2013-2015 Zhang Rui <bbcallen@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +17,8 @@
 #
 
 IJK_LIB_NAME=android-ndk-profiler
-IJK_LIB_UPSTREAM=https://github.com/Bilibili/android-ndk-profiler.git
-IJK_LIB_FORK=https://github.com/Bilibili/android-ndk-profiler.git
+IJK_LIB_UPSTREAM=https://github.com/bilibili/android-ndk-profiler.git
+IJK_LIB_FORK=https://github.com/bilibili/android-ndk-profiler.git
 IJK_LIB_COMMIT=ijk-r0.3.0-dev
 IJK_LIB_LOCAL_REPO=extra/android-ndk-profiler
 

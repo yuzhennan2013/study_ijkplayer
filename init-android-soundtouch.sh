@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 #
-# Copyright (C) 2013-2015 Bilibili
+# Copyright (C) 2013-2015 bilibili
 # Copyright (C) 2013-2015 Zhang Rui <bbcallen@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +17,8 @@
 #
 
 
-IJK_SOUNDTOUCH_UPSTREAM=https://github.com/Bilibili/soundtouch.git
-IJK_SOUNDTOUCH_FORK=https://github.com/Bilibili/soundtouch.git
+IJK_SOUNDTOUCH_UPSTREAM=https://github.com/bilibili/soundtouch.git
+IJK_SOUNDTOUCH_FORK=https://github.com/bilibili/soundtouch.git
 IJK_SOUNDTOUCH_COMMIT=ijk-r0.1.2-dev
 IJK_SOUNDTOUCH_LOCAL_REPO=extra/soundtouch
 

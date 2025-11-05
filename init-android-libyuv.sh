@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 #
-# Copyright (C) 2013-2015 Bilibili
+# Copyright (C) 2013-2015 bilibili
 # Copyright (C) 2013-2015 Zhang Rui <bbcallen@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +17,8 @@
 #
 
 
-IJK_LIBYUV_UPSTREAM=https://github.com/Bilibili/libyuv.git
-IJK_LIBYUV_FORK=https://github.com/Bilibili/libyuv.git
+IJK_LIBYUV_UPSTREAM=https://github.com/bilibili/libyuv.git
+IJK_LIBYUV_FORK=https://github.com/bilibili/libyuv.git
 IJK_LIBYUV_COMMIT=ijk-r0.2.1-dev
 IJK_LIBYUV_LOCAL_REPO=extra/libyuv
 

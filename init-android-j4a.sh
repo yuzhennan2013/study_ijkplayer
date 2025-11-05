@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 #
-# Copyright (C) 2016 Bilibili
+# Copyright (C) 2016 bilibili
 # Copyright (C) 2016 Zhang Rui <bbcallen@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +16,8 @@
 # limitations under the License.
 #
 
-IJK_J4A_UPSTREAM=https://github.com/Bilibili/jni4android.git
-IJK_J4A_FORK=https://github.com/Bilibili/jni4android.git
+IJK_J4A_UPSTREAM=https://github.com/bilibili/jni4android.git
+IJK_J4A_FORK=https://github.com/bilibili/jni4android.git
 IJK_J4A_COMMIT=v0.0.2
 IJK_J4A_LOCAL_REPO=extra/jni4android
 
