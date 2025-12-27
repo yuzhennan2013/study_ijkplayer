@@ -28,6 +28,9 @@ TOOLS=tools
 git --version
 
 echo "== pull ffmpeg base =="
+# Mac终端命令行中执行"./"、"sh"命令运行文件的区别:https://juejin.cn/post/7428157656257118234
+# ./ 用于执行当前目录下的可执行文件，需要文件具有执行权限。
+# sh 用于调用 sh 解释器来执行脚本文件，不要求文件具有执行权限，但文件必须是一个文本文件。
 sh $TOOLS/pull-repo-base.sh $IJK_FFMPEG_UPSTREAM $IJK_FFMPEG_LOCAL_REPO
 
 function pull_fork()
