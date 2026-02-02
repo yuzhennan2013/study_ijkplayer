@@ -22,6 +22,7 @@ IJK_FFMPEG_FORK=https://github.com/bilibili/FFmpeg.git
 IJK_FFMPEG_COMMIT=ff4.0--ijk0.8.8--20210426--001
 IJK_FFMPEG_LOCAL_REPO=extra/ffmpeg
 
+#-e 参数表示只要shell脚本中发生错误，即命令返回值不等于0，则停止执行并退出shell。https://zhuanlan.zhihu.com/p/400723887
 set -e
 TOOLS=tools
 
@@ -36,7 +37,7 @@ sh $TOOLS/pull-repo-base.sh $IJK_FFMPEG_UPSTREAM $IJK_FFMPEG_LOCAL_REPO
 function pull_fork()
 {
     echo "== pull ffmpeg fork $1 =="
-    # 以引用的方式克隆base，减少网络传输等待时间
+    # 使用git clone reference技术，将前述clone下来的$IJK_FFMPEG_LOCAL_REPO作为base，以引用的方式克隆各CPU架构到本地独立文件夹，避免重复网络传输及本地拷贝，节省时间和空间。
     sh $TOOLS/pull-repo-ref.sh $IJK_FFMPEG_FORK android/contrib/ffmpeg-$1 ${IJK_FFMPEG_LOCAL_REPO}
     cd android/contrib/ffmpeg-$1
     git checkout ${IJK_FFMPEG_COMMIT} -B ijkplayer
