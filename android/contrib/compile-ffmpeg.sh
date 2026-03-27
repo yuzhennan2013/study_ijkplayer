@@ -35,6 +35,17 @@ echo_archs() {
     echo "[*] check archs"
     echo "===================="
     echo "FF_ALL_ARCHS = $FF_ACT_ARCHS_ALL"
+    # 在 Shell 脚本中，$* 是一个特殊变量，代表传递给脚本或函数的所有参数。 
+    # +1
+    # 核心功能
+    # 当你运行一个脚本并传入多个参数时（例如 ./script.sh a b c），$* 会获取这些所有的参数。
+    # $* 与 $@ 的关键区别
+    # 虽然两者都代表所有参数，但在加双引号时行为完全不同： 
+    # "$*"（加引号）：将所有参数看作一个单一的字符串。参数之间由环境变量 IFS（通常是空格）分隔。
+    # 例："$1 $2 $3"
+    # "$@"（加引号）：将每个参数看作独立的字符串。这是最常用的推荐方式，因为它能正确处理带空格的参数。
+    # 例："$1" "$2" "$3"
+    # 不加引号时：$* 和 $@ 的行为基本一致，都会按空格拆分参数。
     echo "FF_ACT_ARCHS = $*"
     echo ""
 }
@@ -58,7 +69,26 @@ echo_nextstep_help() {
     echo "sh compile-ijk.sh "
 }
 
-#----------
+# 在 Shell 脚本中，switch 逻辑是通过 case 语句来实现的。它非常适合处理多分支选择，尤其是匹配字符串或模式。
+# 1. 基本语法结构
+# bash
+# case "变量" in
+#     模式1)
+#         # 执行命令1
+#         ;;
+#     模式2)
+#         # 执行命令2
+#         ;;
+#     *)
+#         # 默认执行（相当于 default）
+#         ;;
+# esac
+
+# 2. 核心规则
+# )：每个模式以右括号结束。
+# ;;：每个分支必须以双分号结尾（相当于 break），否则会报错。
+# *：最后的星号代表通配符，用于匹配所有未命中的情况。
+# esac：是 case 反过来写，表示结束。 
 case "$FF_TARGET" in
     "")
         echo_archs armv7a
@@ -71,6 +101,29 @@ case "$FF_TARGET" in
     ;;
     all32)
         echo_archs $FF_ACT_ARCHS_32
+        # 在 Shell 脚本（如 Bash）中，for ... in 循环默认使用空格、制表符（Tab）和换行符作为分隔符。 
+        # 如果你需要按逗号、分号或其他特定字符拆分字符串，主要有以下三种常用方法：
+        # 1. 修改内部字段分隔符（IFS）
+        # IFS（Internal Field Separator）是控制 Shell 如何拆分词语的环境变量。 
+        # 实现方式：先将 IFS 设置为目标分隔符，再运行循环。
+        # 最佳实践：建议在修改前备份 IFS，并在循环后恢复，以防影响后续脚本逻辑。 
+        # #!/bin/bash
+        # data="apple,banana,cherry,orange"
+
+        # # 1. 备份旧的 IFS，设置新的 IFS 为逗号
+        # OLD_IFS=$IFS
+        # IFS=","
+
+        # # 2. 执行循环（注意：$data 不能加双引号，否则会被视为一个整体）
+        # for item in $data; do
+        #     echo "水果: $item"
+        # done
+
+        # # 3. 恢复原始 IFS
+        # IFS=$OLD_IFS
+
+        # 在 Shell 脚本中，do 和 done 是循环结构的边界关键词。它们成对出现，用来包裹循环体内需要重复执行的代码块。
+        # 无论是 for、while 还是 until 循环，都必须使用这对关键字。
         for ARCH in $FF_ACT_ARCHS_32
         do
             sh tools/do-compile-ffmpeg.sh $ARCH $FF_TARGET_EXTRA
