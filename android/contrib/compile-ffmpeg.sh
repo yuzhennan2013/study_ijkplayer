@@ -140,9 +140,14 @@ case "$FF_TARGET" in
     ;;
     clean)
         echo_archs FF_ACT_ARCHS_64
+        # 在 Linux Shell 脚本（如 Bash）中，判断变量是否需要加 $ 符号，最简单的准则是：定义或修改变量时不加，引用（取值）变量时必须加
         for ARCH in $FF_ACT_ARCHS_ALL
         do
             if [ -d ffmpeg-$ARCH ]; then
+                # 这是一个非常“暴力”的清理命令，执行前一定要确认清楚。它的作用是强制删除工作区中所有未被 Git 追踪的文件
+                # 什么时候用它？
+                # 项目环境乱套了，想彻底回到“刚拉取代码”的最干净状态。
+                # 编译报错，怀疑是旧的中间文件干扰，需要清空所有构建产物。
                 cd ffmpeg-$ARCH && git clean -xdf && cd -
             fi
         done
@@ -153,6 +158,12 @@ case "$FF_TARGET" in
     ;;
     *)
         echo_usage
+        # 在 Linux Shell 中，exit 1 的核心作用是终止当前脚本并返回一个“失败”的状态码给操作系统。
+        # 1. 状态码的含义
+        # exit 0：表示程序成功执行（Success）。
+        # exit 1（或 1-255 之间的任何非零值）：表示程序执行失败或出现异常（Failure/Error）。
+        # 1 通常是通用的“一般错误”。
+        # 特定的错误码（如 127 表示找不到命令，126 表示权限不足）。
         exit 1
     ;;
 esac
