@@ -23,6 +23,12 @@
 echo "===================="
 echo "[*] check env $1"
 echo "===================="
+# 在 Linux Shell（如 Bash 或 Zsh）中，set -e 是一个内置命令，用于开启 "即时退出" (errexit) 模式。 
+# 核心功能
+# 它的作用是：一旦脚本中的任何命令执行失败（返回非零退出状态码），脚本将立即停止运行。 
+# OneUptime
+# OneUptime
+# 在默认情况下，Shell 脚本即便中间某行命令报错，也会继续执行下一行。这可能会导致后续操作基于错误的前提进行（例如：进入目录失败后却执行了删除操作），使用 set -e 可以有效防止这种灾难性的连锁反应。
 set -e
 
 
@@ -32,6 +38,7 @@ FF_ARCH=$1
 FF_BUILD_OPT=$2
 echo "FF_ARCH=$FF_ARCH"
 echo "FF_BUILD_OPT=$FF_BUILD_OPT"
+# 在 if [ -z "$var" ] 这种结构中，-z 用于检查字符串的长度是否为零。
 if [ -z "$FF_ARCH" ]; then
     echo "You must specific an architecture 'arm, armv7a, x86, ...'."
     echo ""
@@ -42,7 +49,11 @@ fi
 FF_BUILD_ROOT=`pwd`
 FF_ANDROID_PLATFORM=android-9
 
-
+# Shell中直接写变量名（不可以）
+# 在 Shell 中，你不能只写一个变量名就结束：
+# bash
+# my_var      # 错误！系统会认为你在运行一个名为 "my_var" 的命令
+# my_var=     # 正确。这定义了变量，值为空字符串
 FF_BUILD_NAME=
 FF_SOURCE=
 FF_CROSS_PREFIX=
@@ -67,6 +78,16 @@ echo ""
 echo "--------------------"
 echo "[*] make NDK standalone toolchain"
 echo "--------------------"
+# 在 Linux Shell 中，这行命令的意思是：在当前 Shell 环境中执行 do-detect-env.sh 脚本。
+# 具体拆解如下：
+# 1. 开头的 . (点号)
+# 这里的第一个点号是 source 命令的缩写。
+# 普通执行 (./script.sh)：会开启一个子 Shell（Subshell）来运行脚本。脚本运行完后，里面定义的变量、环境变量、别名（Alias）都会随之消失。
+# Source 执行 (. ./script.sh)：是在当前 Shell 中直接运行。脚本里设置的任何变量或路径，在脚本执行完后依然有效。
+# 2. 空格
+# 第一个点号和路径之间必须有空格。
+# 3. ./tools/do-detect-env.sh
+# 这是脚本的相对路径，表示执行当前目录下 tools 文件夹里的 do-detect-env.sh。
 . ./tools/do-detect-env.sh
 FF_MAKE_TOOLCHAIN_FLAGS=$IJK_MAKE_TOOLCHAIN_FLAGS
 FF_MAKE_FLAGS=$IJK_MAKE_FLAG
