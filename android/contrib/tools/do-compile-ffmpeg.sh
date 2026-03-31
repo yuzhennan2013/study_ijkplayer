@@ -105,6 +105,31 @@ if [ "$FF_ARCH" = "armv7a" ]; then
     FF_CROSS_PREFIX=arm-linux-androideabi
     FF_TOOLCHAIN_NAME=${FF_CROSS_PREFIX}-${FF_GCC_VER}
 
+    # 这段代码是 FFmpeg 配置脚本 (configure) 的典型参数设置，专门针对 ARMv7-A 架构（特别是早期 Android 设备常用的 Cortex-A8 处理器）进行性能优化。
+    # 以下是各行参数的具体含义：
+    # ## 1. --arch=arm --cpu=cortex-a8
+
+    # * 作用：明确告知 FFmpeg 目标硬件。
+    # * 影响：编译器会针对 Cortex-A8 的流水线特性进行指令调度优化。
+    # * 背景：Cortex-A8 是第一款支持 NEON 指令集的架构（如经典的 iPhone 4 或早期三星 Galaxy S 系列）。
+
+    # ## 2. --enable-neon
+
+    # * 作用：开启 NEON (SIMD) 指令集加速。
+    # * 重要性：这是多媒体处理的“性能怪兽”。NEON 可以并行处理多个数据（单指令多数据），在视频编解码（如 H.264 解码）、颜色空间转换（YUV 转 RGB）时，性能提升通常可达 3-10 倍。
+
+    # ## 3. --enable-thumb
+
+    # * 作用：使用 Thumb-2 指令集。
+    # * 优势：Thumb 指令比标准的 32 位 ARM 指令更短（混合 16/32 位），可以显著减小生成的二进制文件（.so）体积（通常能缩小 20%-30%），同时在现代处理器上保持接近 ARM 指令的执行效率。
+
+    # ------------------------------
+    # ## 与你之前提到的内容串联：
+
+    # * 编译器：这些参数会传递给 arm-linux-androideabi-gcc（或 Clang）。
+    # * 中间产物：开启 neon 后，生成的 .o 文件中会包含大量的向量化指令。
+    # * 配置：这些选项最终会写入生成的 config.h 中（例如 #define HAVE_NEON 1），从而让 FFmpeg 源码内部的 C 代码切换到高效的汇编版本。
+
     FF_CFG_FLAGS="$FF_CFG_FLAGS --arch=arm --cpu=cortex-a8"
     FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-neon"
     FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-thumb"
