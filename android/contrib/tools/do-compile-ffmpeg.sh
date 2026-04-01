@@ -327,11 +327,18 @@ mkdir -p $FF_PREFIX
 
 FF_TOOLCHAIN_TOUCH="$FF_TOOLCHAIN_PATH/touch"
 if [ ! -f "$FF_TOOLCHAIN_TOUCH" ]; then
+    # 这段代码是 Android NDK 早期开发中常见的脚本片段，主要用于自动化生成独立交叉编译工具链（Standalone Toolchain）。
+    # 其逻辑解析如下：
+    # 检查标记文件：它先检查是否存在 FF_TOOLCHAIN_TOUCH 定义的文件。
+    # 按需生成：如果该文件不存在（说明工具链还没准备好），则调用 NDK 里的脚本 make-standalone-toolchain.sh。
+    # 应用配置：根据你定义的平台版本（--platform）和工具链名称（--toolchain）进行解压和配置。
+    # 打上标记：执行成功后执行 touch 创建该文件，下次运行脚本时就会直接跳过生成步骤，节省时间。
+    # FF_MAKE_TOOLCHAIN_FLAGS包含toolchain工具链安装目录
     $ANDROID_NDK/build/tools/make-standalone-toolchain.sh \
         $FF_MAKE_TOOLCHAIN_FLAGS \
         --platform=$FF_ANDROID_PLATFORM \
         --toolchain=$FF_TOOLCHAIN_NAME
-    touch $FF_TOOLCHAIN_TOUCH;
+    touch $FF_TOOLCHAIN_TOUCH;# 生成标记文件，表示工具链已准备好
 fi
 
 
@@ -342,10 +349,55 @@ echo "[*] check ffmpeg env"
 echo "--------------------"
 export PATH=$FF_TOOLCHAIN_PATH/bin/:$PATH
 #export CC="ccache ${FF_CROSS_PREFIX}-gcc"
+
+# 这段代码的作用是定义交叉编译环境变量。它告诉编译器和构建系统（如 FFmpeg 的 configure 脚本），在编译时不要使用你电脑（Host）自带的 GCC，而是使用针对 Android 平台（Target）的工具。
+# 这些变量的含义如下：
+
+# * CC (C Compiler)：指定 C 语言编译器（通常是 arm-linux-androideabi-gcc 之类的）。
+# * LD (Linker)：指定链接器，负责将编译后的目标文件（.o）连接成库或可执行文件。
+# * AR (Archiver)：用于创建静态库（.a 文件）。
+# * STRIP：用于从二进制文件中移除符号表和调试信息，减小最终生成的库文件体积。
+
+# ## 🚨 针对现代 NDK (r19+) 的重要提醒：
+# 如果你使用的是较新的 NDK，这里有两个关键的变化需要注意：
+
+#    1. GCC 已被弃用：现代 NDK 已经全面转向 Clang。
+#    * 你应该将 CC 指向 ...-clang。
+#       * 例如：export CC="${FF_CROSS_PREFIX}${FF_ANDROID_PLATFORM}-clang"。
+#    2. 前缀变化：由于 Clang 是集成化的，前缀通常包含目标架构和 Android API 版本（如 aarch64-linux-android24-clang）。
+
+# 你是准备编译特定的 FFmpeg 版本吗？ 如果能告诉我你的 NDK 版本和目标架构（如 armv7a 或 arm64-v8a），我可以帮你写出更准确的环境变量配置。
 export CC="${FF_CROSS_PREFIX}-gcc"
 export LD=${FF_CROSS_PREFIX}-ld
 export AR=${FF_CROSS_PREFIX}-ar
 export STRIP=${FF_CROSS_PREFIX}-strip
+
+# 这些是传递给 C 编译器（CC）的优化与规范参数，主要目的是让生成的库更小、跑得更快，并符合 Android 的安全要求。
+# 简单拆解一下这些参数的作用：
+# ## 1. 性能优化 (Performance)
+
+# * -O3: 最高级别的代码优化。编译器会尝试各种手段（如循环展开）来提升运行速度。
+# * -ffast-math: 极速数学计算。它会违反一些严格的 IEEE 浮点数标准来换取计算速度，这对 FFmpeg 这种涉及大量编解码计算的项目非常有效。
+# * -fstrict-aliasing: 允许编译器假设不同类型的指针不会指向同一个内存地址，从而产生更高效的机器码。
+
+# ## 2. 代码规范与警告 (Warnings)
+
+# * -Wall: 开启“所有”常见警告。帮你发现代码中潜在的 Bug。
+# * -std=c99: 指定使用 C99 语言标准（FFmpeg 源码通常要求这个标准）。
+# * -Werror=strict-aliasing: 如果代码违反了别名规则（可能导致隐蔽 Bug），直接报错停止编译，确保安全性。
+# * -Wno-psabi: 忽略关于 ARM ABI（二进制接口）变动的警告，避免编译日志被无用的提示刷屏。
+
+# ## 3. 系统适配与安全 (System & Security)
+
+# * -pipe: 在编译阶段使用管道通信而不是临时文件，可以加快编译速度（如果你内存够大）。
+# * -Wa,--noexecstack: 告诉汇编器禁止“可执行堆栈”。这是一个重要的 Android 安全加固项，防止某些类型的溢出攻击。
+# * -DANDROID: 定义一个宏变量。代码里如果有 #ifdef ANDROID，这部分逻辑就会生效。
+# * -DNDEBUG: 定义“非调试”模式。它会禁用代码中的 assert（断言）语句，进一步减小体积并提升性能。
+
+# ------------------------------
+# ## 💡 一个避坑小建议：
+# 如果你在编译过程中遇到 “Linker Error”（链接错误），有时是因为 -ffast-math 或特定的优化导致符号处理异常。
+# 你现在是在为哪种 CPU 架构（armv7, arm64, x86）配置这些参数？ 针对 arm64-v8a，通常还可以加入特定的向量加速指令。
 
 FF_CFLAGS="-O3 -Wall -pipe \
     -std=c99 \
@@ -364,6 +416,7 @@ FF_CFLAGS="-O3 -Wall -pipe \
 #FF_CFLAGS="$FF_CFLAGS -finline-limit=300"
 
 export COMMON_FF_CFG_FLAGS=
+# 这些标志位随后会被传递给 FFmpeg 的 ./configure 命令，决定最终编译出来的库体积有多大、支持哪些格式。
 . $FF_BUILD_ROOT/../../config/module.sh
 
 
@@ -373,8 +426,38 @@ if [ -f "${FF_DEP_OPENSSL_LIB}/libssl.a" ]; then
     echo "OpenSSL detected"
 # FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-nonfree"
     FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-openssl"
-
+    # 这条命令的作用是向编译器（CC）添加 OpenSSL 的头文件搜索路径。
     FF_CFLAGS="$FF_CFLAGS -I${FF_DEP_OPENSSL_INC}"
+    # 这句话的作用是配置链接器参数，告诉它去哪里找 OpenSSL 的二进制库文件（.a 或 .so），以便将加密功能集成到 FFmpeg 中。
+    # 具体参数拆解如下：
+    # ## 1. 参数含义
+
+    # * -L${FF_DEP_OPENSSL_LIB}：指定库文件搜索路径。
+    # * -L 后面紧跟目录路径。它告诉链接器（LD）：“如果找不到库，去这个文件夹里翻翻。”
+    # * -lssl：链接 libssl 库。
+    # * 在 Linux/Android 系统中，链接器会自动寻找名为 libssl.a（静态）或 libssl.so（动态）的文件。
+    # * -lcrypto：链接 libcrypto 库。
+    # * 这是 OpenSSL 的核心加密算法库（处理 AES、RSA、SHA 等）。libssl 依赖于它，所以这两个通常成对出现。
+
+    # ## 2. 为什么顺序很重要？
+    # 在链接参数中，顺序非常关键：
+
+    # * 被依赖的库要放在后面。
+    # * 因为 libssl 调用了 libcrypto 里的加密函数，所以 -lssl 必须写在 -lcrypto 的左边。如果写反了，链接器可能会报错“找不到符号（Undefined reference）”。
+
+    # ## 3. 与之前 -I 的配合
+
+    # * 之前： FF_CFLAGS 里的 -I 是为了让编译阶段通过（通过头文件知道函数怎么用）。
+    # * 现在： FF_DEP_LIBS 里的 -L 和 -l 是为了让链接阶段通过（把真实的机器码打包进最终的库里）。
+
+    # ------------------------------
+    # ## 💡 关键排查点：
+    # 如果执行脚本时报错 libssl.a not found，请检查以下两点：
+
+    # 1. 路径对吗？ 在终端输入 ls ${FF_DEP_OPENSSL_LIB} 看看里面是否有 libssl.a。
+    # 2. 架构匹配吗？ 确保这个路径下的 .a 文件是为 Android (ARM/x86) 编译的，而不是 macOS 自带的。
+
+    # 你现在的 OpenSSL 库是静态链接（.a）进去，还是打算让 App 运行时动态加载（.so）？
     FF_DEP_LIBS="$FF_DEP_LIBS -L${FF_DEP_OPENSSL_LIB} -lssl -lcrypto"
 fi
 
