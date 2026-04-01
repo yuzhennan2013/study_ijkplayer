@@ -45,6 +45,57 @@ if [ -z "$FF_ARCH" ]; then
     exit 1
 fi
 
+# 在父脚本调用子脚本时，子脚本中 pwd 的返回值取决于你调用子脚本的方式：
+# ## 1. 默认情况：返回“执行命令时所在的目录”
+# 无论子脚本存放在哪里，pwd 返回的都是父脚本当前的工作目录。
+
+# * 原理：子进程会继承父进程的“当前工作目录”（Working Directory）。
+# * 例子：
+# * 你在 /home/user/ 执行父脚本。
+#    * 父脚本里写了 ./scripts/build.sh。
+#    * 子脚本 build.sh 里的 pwd 返回的依然是 /home/user/。
+
+# ## 2. 如果父脚本在调用前 cd 了
+# 如果你在调用子脚本之前改变了目录，pwd 就会改变：
+
+# cd /tmp
+# sh /home/user/project/sub-script.sh  # 子脚本里的 pwd 会返回 /tmp
+
+# ## 3. 如果你想在子脚本里获取“脚本文件所在的目录”
+# 这在 FFmpeg 编译脚本中非常常见，因为你可能需要引用同目录下的其他配置文件。此时不能用 pwd，而要用：
+
+# # 获取子脚本文件本身所在的绝对路径
+# SCRIPT_DIR=$(cd $(dirname $0); pwd)
+
+# 这样无论你在哪里运行，都能定位到脚本自己的位置。
+# 总结：pwd 始终返回你当前“人”在哪个目录下（当前 shell 的工作路径），而不是脚本文件存放的路径。
+# 你是因为子脚本找不到同级目录下的工具链或配置文件才遇到这个问题的吗？
+
+# 这行代码是 Shell 脚本中的“金句”，它的核心作用是：无论你在哪里调用脚本，都能获取该脚本文件所在的绝对路径。
+# 在 FFmpeg 编译脚本中，这通常用来定位 交叉编译工具链（Toolchain） 或 依赖库。
+# ## 拆解分析：
+
+#    1. $0: 获取当前执行的脚本文件名（可能包含相对路径，如 ./build.sh）。
+#    2. dirname $0: 提取出脚本所在的目录部分。如果执行 ./scripts/build.sh，它会得到 ./scripts。
+#    3. cd ...: 进入这个目录。
+#    4. pwd: 在进入目录后，获取当前的绝对路径（如 /home/user/ffmpeg/scripts）。
+#    5. $( ... ): 将整条命令的结果赋值给变量。
+
+# ## 为什么要这么写？
+# 如果你直接用 pwd，获取的是你执行命令时所在的目录（Working Directory）；
+# 而用这一串代码，获取的是脚本文件实际存放的目录（Script Location）。
+# 对比场景：
+# 假设脚本在 /opt/ffmpeg/build.sh，而你在 /home/user/ 下执行 /opt/ffmpeg/build.sh：
+
+# * 直接用 pwd：返回 /home/user （会导致找不到同目录下的配置文件）。
+# * 用这行代码：返回 /opt/ffmpeg （能准确找到脚本旁边的资源）。
+
+# ## 建议写法
+# 为了处理路径中包含空格的情况，工业级的写法通常会加上双引号：
+
+# SCRIPT_DIR=$(cd "$(dirname "$0")"; pwd)
+
+# 你现在是打算用这个路径来指定交叉编译器的 PREBUILT 路径吗？
 
 FF_BUILD_ROOT=`pwd`
 FF_ANDROID_PLATFORM=android-9
@@ -134,6 +185,37 @@ if [ "$FF_ARCH" = "armv7a" ]; then
     FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-neon"
     FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-thumb"
 
+    # 这段代码是用于 ARMv7-A 架构（特别是针对 Cortex-A8 处理器）的编译和链接参数配置，常出现在 FFmpeg 等多媒体库的 Android 交叉编译脚本中。 [1, 2] 
+    # 以下是各项参数的详细解释：
+    # ## 1. CFLAGS (编译选项) [3] 
+    # FF_EXTRA_CFLAGS 中添加的参数主要定义了目标硬件的指令集和浮点运算方式：
+
+    # * -march=armv7-a: 指定目标架构为 ARMv7-A。
+    # * -mcpu=cortex-a8: 针对 Cortex-A8 处理器进行优化。Cortex-A8 是第一款支持 NEON 技术并广泛用于早期 Android 设备（如 Nexus One）的处理器。
+    # * -mfpu=vfpv3-d16: 指定使用 VFPv3 浮点单元，且限制为 16 个 64 位寄存器（d0-d15）。这是 ARMv7-A 的标准配置，具有最广泛的兼容性。
+    # * -mfloat-abi=softfp: 使用软浮点调用约定，但允许生成硬件浮点指令。
+    # * 这意味着函数参数仍通过通用寄存器传递（与 soft 兼容），但内部计算由硬件 FPU 完成。这在早期的 Android NDK 中是标准做法，以确保二进制兼容性。
+    # * -mthumb: 生成 Thumb-2 指令集。相比于标准的 ARM 指令，Thumb 指令更紧凑，可以显著减小生成的可执行文件体积，且在 ARMv7 上性能损耗极小。 [1, 2, 4, 5, 6, 7] 
+
+    # ## 2. LDFLAGS (链接选项)
+    # FF_EXTRA_LDFLAGS 中添加的参数用于处理特定的硬件缺陷：
+
+    # * -Wl,--fix-cortex-a8: 这是一个链接器指令，用于修复 Cortex-A8 处理器早期版本中的一个 CPU 勘误（Errata）。
+    # * 该缺陷可能导致某些特定序列的指令在 4KB 边界附近执行时发生错误。开启此选项后，链接器会在受影响的代码段插入补丁或跳转，以避开该缺陷。 [8] 
+
+    # ## 总结
+    # 这组配置的主要目的是：在保证最大兼容性的前提下（兼容所有 ARMv7 设备），针对 Cortex-A8 进行优化，并修复其已知的硬件缺陷。
+    # 注意：如果你正在使用较新的 Android NDK（如 r19 及以上版本），Cortex-A8 已逐渐被视为过时。现代 NDK 默认使用更高效的 hard 浮点 ABI 或已经移除了对 --fix-cortex-a8 的默认支持。 [8] 
+    # 您是在进行 FFmpeg 的 Android 移植 还是其他 ARM 嵌入式开发？建议根据您的 NDK 版本 确认是否需要调整这些参数。
+
+    # [1] [https://stackoverflow.com](https://stackoverflow.com/questions/27436589/c-compiler-error-build-ffmpeg-for-android)
+    # [2] [https://stackoverflow.com](https://stackoverflow.com/questions/77373572/armeabi-v7a-executable-compiles-but-so-doesnt)
+    # [3] [https://elixir.bootlin.com](https://elixir.bootlin.com/glibc/glibc-2.33/source/INSTALL#:~:text=Any%20compiler%20options%20required%20for%20all%20compilations%2C,optimization%20and%20debugging%2C%20should%20go%20in%20%27CFLAGS%27.)
+    # [4] [https://gist.github.com](https://gist.github.com/sdwfrost/beedeb49f92aecd3070751ea6a1e1ac4)
+    # [5] [https://stackoverflow.com](https://stackoverflow.com/questions/8888945/enable-neon-on-cortex-a8-with-fpu-set-to-either-softvfp-or-none)
+    # [6] [https://groups.google.com](https://groups.google.com/g/android-ndk/c/rVpPljdMbGs)
+    # [7] [https://github.com](https://github.com/ml-explore/mlx/issues/20)
+    # [8] [https://github.com](https://github.com/android/ndk/issues/766)
     FF_EXTRA_CFLAGS="$FF_EXTRA_CFLAGS -march=armv7-a -mcpu=cortex-a8 -mfpu=vfpv3-d16 -mfloat-abi=softfp -mthumb"
     FF_EXTRA_LDFLAGS="$FF_EXTRA_LDFLAGS -Wl,--fix-cortex-a8"
 
