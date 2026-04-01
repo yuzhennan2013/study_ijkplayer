@@ -464,6 +464,18 @@ fi
 if [ -f "${FF_DEP_LIBSOXR_LIB}/libsoxr.a" ]; then
     echo "libsoxr detected"
     FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-libsoxr"
+    # 这段代码片段通常出现在 FFmpeg 的编译脚本或自定义编译工具（如 mobile-ffmpeg 或 ffmpeg-android-maker）中。它的作用是手动将 libsoxr（一个高质量音频重采样库）的路径和链接选项添加到编译环境变量中。
+    # 具体含义如下：
+
+    # * FF_CFLAGS: 这里的 -I 指定了 libsoxr 头文件（.h）所在的目录，确保编译器能找到相关定义。
+    # * FF_DEP_LIBS:
+    # * -L 指定了 libsoxr 库文件（.a 或 .so）所在的目录。
+    # * -lsoxr 告诉链接器在链接阶段包含该库。
+
+    # 常见场景：
+    # 如果你在编译 FFmpeg 时想要启用 libsoxr 以获得比默认重采样器更好的音频质量，通常需要在运行 ./configure 时带上 --enable-libsoxr 参数，而你提供的这两行代码则是为了确保编译器在非标准路径下也能找到这个库。
+    # 你需要检查 ${FF_DEP_LIBSOXR_INC} 和 ${FF_DEP_LIBSOXR_LIB} 这两个变量是否已经在脚本的前文被正确赋值为实际的路径。
+    # 你是在**为哪个平台（Android/iOS/Linux）**编译 FFmpeg 遇到了路径报错吗？
 
     FF_CFLAGS="$FF_CFLAGS -I${FF_DEP_LIBSOXR_INC}"
     FF_DEP_LIBS="$FF_DEP_LIBS -L${FF_DEP_LIBSOXR_LIB} -lsoxr"
